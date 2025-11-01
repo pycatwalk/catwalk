@@ -41,7 +41,9 @@ def main():
         edges = [type("ES", (), e) for e in flow["edges"]]
         g = Graph(nodes, edges)
         comp = Compiler()
-        rt = Runtime(comp.compile(g))
+        compiled, order = comp.compile(g)
+        rt = Runtime(compiled, order)
+
         asyncio.run(rt.run())
 
     elif args.cmd == "validate":

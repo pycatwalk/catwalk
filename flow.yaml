@@ -2,26 +2,11 @@ nodes:
   - id: n1
     type: trigger
     name: start
-    func: lambda ctx: {"user": "Wan"}
-
+    func: "lambda ctx: {'user': 'Wan'}"
   - id: n2
-    type: extraction
-    name: get_name
-    func: lambda ctx: ctx["n1"]["user"]
-
-  - id: n3
-    type: conditional
-    name: is_active
-    func: lambda ctx: True
-
-  - id: n4
     type: execution
     name: greet
-    func: lambda ctx: f"Hello {ctx['n2']}, active={ctx['n3']}"
+    func: "lambda ctx: f'Hello {ctx[\"n1\"][\"user\"]}'"
 edges:
   - from: n1
     to: n2
-  - from: n2
-    to: n3
-  - from: n3
-    to: n4
