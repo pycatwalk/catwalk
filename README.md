@@ -8,7 +8,7 @@ It lets you create, connect, and run workflow nodes like *trigger*, *extraction*
 ## ⚙️ Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<youruser>/catwalk/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pycatwalk/catwalk/main/install.sh | bash
 ````
 
 Once installed, use:
