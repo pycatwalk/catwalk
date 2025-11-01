@@ -1,7 +1,7 @@
 import asyncio
 import json
 import yaml
-from catwalk import Graph, Compiler, Runtime
+from catwalk_core import Graph, Compiler, Runtime
 from catwalk_schema import validate_flow
 from uvicorn import Config, Server
 
