@@ -5,12 +5,14 @@ echo "Installing CatWalk..."
 mkdir -p ~/.catwalk
 git clone https://github.com/pycatwalk/catwalk ~/.catwalk || true
 
-cat <<'EOF' > /usr/local/bin/catwalk
+mkdir -p ~/.local/bin
+cat <<'EOF' > ~/.local/bin/catwalk
 #!/usr/bin/env bash
 python3 ~/.catwalk/catwalk.py "$@"
 EOF
+chmod +x ~/.local/bin/catwalk
 
-chmod +x /usr/local/bin/catwalk
+export PATH="$HOME/.local/bin:$PATH"
 
 echo "✅ CatWalk installed. Try:"
 echo "   catwalk --help"
