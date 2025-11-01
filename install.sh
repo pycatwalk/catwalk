@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 set -e
-echo "Installing CatWalk..."
+echo "Installing CatWalk v0.1.0 ..."
 
 mkdir -p ~/.catwalk
 git clone https://github.com/pycatwalk/catwalk ~/.catwalk || true
-
-mv ~/.catwalk/catwalk.py ~/.catwalk/cli.py
 
 mkdir -p ~/.local/bin
 cat <<'EOF' > ~/.local/bin/catwalk
