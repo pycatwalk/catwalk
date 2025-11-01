@@ -53,43 +53,19 @@ class Compiler:
 
 
 class Runtime:
-    """Executes a compiled workflow in topological order."""
-
-    def __init__(self, graph: Graph, order):
-        self.graph = graph
+    def __init__(self, compiled_graph, order):
+        self.graph = compiled_graph  # dict
         self.order = order
 
-    async def run(self, ctx=None):
-        ctx = ctx or {}
+    async def run(self):
+        print("Executing flow...")
+        ctx = {}
         for node_id in self.order:
-            node = self.graph.nodes[node_id]
-            func = getattr(node, "func", None)
-
-            if isinstance(func, str):
-                func = self._resolve_func(func)
-
-            result = await self._execute(func, ctx)
-            ctx[node_id] = result
-
+            node = self.graph[node_id]
+            func_code = node.get("func")
+            if func_code:
+                func = eval(func_code)
+                result = func(ctx)
+                ctx[node_id] = result
+        print(ctx)
         return ctx
-
-    async def _execute(self, func, ctx):
-        if func is None:
-            return None
-        if inspect.iscoroutinefunction(func):
-            return await func(ctx)
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, func, ctx)
-
-    def _resolve_func(self, func_str):
-        """Resolves 'module.func' or inline 'lambda' strings."""
-        if func_str.strip().startswith("lambda"):
-            return eval(func_str)
-        parts = func_str.split(".")
-        if len(parts) == 1:
-            # single name in current globals
-            return globals().get(func_str)
-        mod_name = ".".join(parts[:-1])
-        fn_name = parts[-1]
-        mod = __import__(mod_name, fromlist=[fn_name])
-        return getattr(mod, fn_name)

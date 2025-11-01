@@ -3,19 +3,30 @@ set -e
 
 echo "Installing CatWalk v0.1.0 ..."
 
-# Clone repository
+# Clone or refresh repository
 rm -rf ~/.catwalk
 git clone https://github.com/pycatwalk/catwalk ~/.catwalk
 
-# Install Python dependencies
-python3 -m pip install --user --upgrade pip
-python3 -m pip install --user -r ~/.catwalk/requirements.txt
+# Create isolated virtual environment
+python3 -m venv ~/.catwalk/venv
+source ~/.catwalk/venv/bin/activate
+
+# Ensure pip exists and is updated
+python -m ensurepip --upgrade
+python -m pip install --upgrade pip setuptools wheel
+
+# Install dependencies
+pip install -r ~/.catwalk/requirements.txt
+
+deactivate
 
 # Create CLI launcher
 mkdir -p ~/.local/bin
 cat <<'EOF' > ~/.local/bin/catwalk
 #!/usr/bin/env bash
-python3 ~/.catwalk/cli.py "$@"
+source ~/.catwalk/venv/bin/activate
+python ~/.catwalk/cli.py "$@"
+deactivate
 EOF
 chmod +x ~/.local/bin/catwalk
 

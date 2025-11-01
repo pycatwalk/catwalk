@@ -130,7 +130,7 @@ Response:
 
 | Component           | Purpose                         |
 | ------------------- | ------------------------------- |
-| `catwalk.py`        | CLI entrypoint                  |
+| `cli.py`            | CLI entrypoint                  |
 | `catwalk_core.py`   | Graph, Compiler, Runtime engine |
 | `catwalk_schema.py` | YAML structure validator        |
 | `catwalk_server.py` | HTTP server via uvicorn         |
@@ -165,7 +165,7 @@ Add it in your YAML as:
 * **Readable**: Flows are YAML, easy to diff and share.
 * **Composable**: Each node is a function.
 * **Portable**: Runs from CLI or HTTP.
-* **Framework-Free**: Only Python + Uvicorn, no FastAPI needed.
+* **Framework-Free**: Only Python + Uvicorn.
 
 ---
 
