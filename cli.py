@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import yaml
+import json
 import asyncio
 from catwalk_schema import validate_flow
 from catwalk_core import Graph, Compiler, Runtime
@@ -10,7 +10,7 @@ def main():
     sub = parser.add_subparsers(dest="cmd")
 
     # run
-    run_cmd = sub.add_parser("run", help="Run a YAML workflow")
+    run_cmd = sub.add_parser("run", help="Run a JSON workflow")
     run_cmd.add_argument("path")
 
     # node/edge management
@@ -19,7 +19,7 @@ def main():
     sub.add_parser("update", help="Update node or edge").add_argument("type")
 
     # validate
-    val_cmd = sub.add_parser("validate", help="Validate YAML flow")
+    val_cmd = sub.add_parser("validate", help="Validate JSON flow")
     val_cmd.add_argument("path")
 
     # serve
@@ -30,7 +30,7 @@ def main():
 
     if args.cmd == "run":
         with open(args.path) as f:
-            flow = yaml.safe_load(f)
+            flow = json.load(f)
         try:
             validate_flow(flow)
             print("✅ Flow validation passed.")
@@ -42,13 +42,13 @@ def main():
         g = Graph(nodes, edges)
         comp = Compiler()
         
-        compiled, order = comp.compile(g)
+        compiled, order = comp.compile(g)  # Now correctly unpacks two values
         rt = Runtime(compiled, order)
         asyncio.run(rt.run())
 
     elif args.cmd == "validate":
         with open(args.path) as f:
-            flow = yaml.safe_load(f)
+            flow = json.load(f)
         try:
             validate_flow(flow)
             print("✅ Flow is valid.")

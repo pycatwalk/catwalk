@@ -49,12 +49,12 @@ class Compiler:
             dfs(start)
 
         order.reverse()
-        return order
+        return graph.nodes, order  # Return both nodes dict and execution order
 
 
 class Runtime:
     def __init__(self, compiled_graph, order):
-        self.graph = compiled_graph  # dict
+        self.graph = compiled_graph  # dict of node_id -> node objects
         self.order = order
 
     async def run(self):
@@ -62,10 +62,11 @@ class Runtime:
         ctx = {}
         for node_id in self.order:
             node = self.graph[node_id]
-            func_code = node.get("func")
+            func_code = getattr(node, 'func', None)
             if func_code:
                 func = eval(func_code)
                 result = func(ctx)
                 ctx[node_id] = result
         print(ctx)
         return ctx
+    

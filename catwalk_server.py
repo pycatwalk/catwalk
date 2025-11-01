@@ -1,6 +1,5 @@
 import asyncio
 import json
-import yaml
 from catwalk_core import Graph, Compiler, Runtime
 from catwalk_schema import validate_flow
 from uvicorn import Config, Server
@@ -20,13 +19,14 @@ async def app(scope, receive, send):
                 if not message.get("more_body"):
                     break
         try:
-            data = yaml.safe_load(body.decode())
+            data = json.loads(body.decode())
             validate_flow(data)
             nodes = [type("NS", (), n) for n in data["nodes"]]
             edges = [type("ES", (), e) for e in data["edges"]]
             g = Graph(nodes, edges)
             comp = Compiler()
-            rt = Runtime(comp.compile(g))
+            compiled, order = comp.compile(g)  # Now correctly unpacks two values
+            rt = Runtime(compiled, order)
             ctx = await rt.run()
             response = json.dumps({"status": "ok", "context": ctx}).encode()
             status = 200

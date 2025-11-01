@@ -1,0 +1,67 @@
+{
+    "nodes": [
+        {
+            "id": "n1",
+            "type": "trigger",
+            "name": "start",
+            "func": "lambda ctx: {'user': 'Wan'}",
+            "position": {
+                "x": 100,
+                "y": 100
+            }
+        },
+        {
+            "id": "n2",
+            "type": "extraction",
+            "name": "get_name",
+            "func": "lambda ctx: ctx['n1']['user']",
+            "position": {
+                "x": 300,
+                "y": 100
+            }
+        },
+        {
+            "id": "n3",
+            "type": "conditional",
+            "name": "is_active",
+            "func": "lambda ctx: True",
+            "position": {
+                "x": 500,
+                "y": 100
+            }
+        },
+        {
+            "id": "n4",
+            "type": "execution",
+            "name": "greet",
+            "func": "lambda ctx: f'Hello {ctx[\"n2\"]}, active={ctx[\"n3\"]}'",
+            "position": {
+                "x": 700,
+                "y": 100
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "from": "n1",
+            "to": "n2",
+            "source": "n1",
+            "target": "n2"
+        },
+        {
+            "id": "e2",
+            "from": "n2",
+            "to": "n3",
+            "source": "n2",
+            "target": "n3"
+        },
+        {
+            "id": "e3",
+            "from": "n3",
+            "to": "n4",
+            "source": "n3",
+            "target": "n4"
+        }
+    ]
+}

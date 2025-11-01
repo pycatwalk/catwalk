@@ -1,6 +1,6 @@
 # 🐈 CatWalk — Teach Me
 
-CatWalk is a declarative workflow engine written in Python, defined entirely in YAML.  
+CatWalk is a declarative workflow engine written in Python, defined entirely in JSON.  
 It lets you create, connect, and run workflow nodes like *trigger*, *extraction*, *conditional*, and *execution* blocks — all without writing complex backend code.
 
 ---
@@ -23,52 +23,67 @@ catwalk --help
 
 | Command                      | Description           |
 | ---------------------------- | --------------------- |
-| `catwalk run flow.yaml`      | Run a YAML workflow   |
+| `catwalk run flow.json`      | Run a JSON workflow   |
 | `catwalk add node`           | Add node              |
 | `catwalk add edge`           | Add edge              |
 | `catwalk update node`        | Update node           |
 | `catwalk remove node`        | Remove node           |
-| `catwalk validate flow.yaml` | Validate YAML         |
+| `catwalk validate flow.json` | Validate JSON         |
 | `catwalk serve`              | Start HTTP API server |
 
 ---
 
 ## 🧠 Example Workflow
 
-```yaml
-nodes:
-  - id: n1
-    type: trigger
-    name: start
-    func: lambda ctx: {"user": "Wan"}
-
-  - id: n2
-    type: extraction
-    name: get_name
-    func: lambda ctx: ctx["n1"]["user"]
-
-  - id: n3
-    type: conditional
-    name: is_active
-    func: lambda ctx: True
-
-  - id: n4
-    type: execution
-    name: greet
-    func: lambda ctx: f"Hello {ctx['n2']}, active={ctx['n3']}"
-edges:
-  - from: n1
-    to: n2
-  - from: n2
-    to: n3
-  - from: n3
-    to: n4
+```json
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "trigger",
+      "name": "start",
+      "func": "lambda ctx: {\"user\": \"Wan\"}"
+    },
+    {
+      "id": "n2",
+      "type": "extraction",
+      "name": "get_name",
+      "func": "lambda ctx: ctx[\"n1\"][\"user\"]"
+    },
+    {
+      "id": "n3",
+      "type": "conditional",
+      "name": "is_active",
+      "func": "lambda ctx: True"
+    },
+    {
+      "id": "n4",
+      "type": "execution",
+      "name": "greet",
+      "func": "lambda ctx: f\"Hello {ctx['n2']}, active={ctx['n3']}\""
+    }
+  ],
+  "edges": [
+    {
+      "from": "n1",
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "to": "n3"
+    },
+    {
+      "from": "n3",
+      "to": "n4"
+    }
+  ]
+}
 ```
 
 Run the workflow:
 
 ```bash
-catwalk run flow.yaml
+catwalk run flow.json
 ```
 
 Expected output:
@@ -83,10 +98,10 @@ Hello Wan, active=True
 
 ## 🧾 Validation
 
-To check that your YAML flow is well-formed:
+To check that your JSON flow is well-formed:
 
 ```bash
-catwalk validate flow.yaml
+catwalk validate flow.json
 ```
 
 Outputs:
@@ -111,11 +126,11 @@ You can run your workflows as HTTP endpoints.
 catwalk serve --port 9000
 ```
 
-Then send a YAML flow:
+Then send a JSON flow:
 
 ```bash
-curl -X POST -H "Content-Type: text/yaml" \
---data-binary @flow.yaml http://127.0.0.1:9000/run
+curl -X POST -H "Content-Type: application/json" \
+--data-binary @flow.json http://127.0.0.1:9000/run
 ```
 
 Response:
@@ -132,9 +147,9 @@ Response:
 | ------------------- | ------------------------------- |
 | `cli.py`            | CLI entrypoint                  |
 | `catwalk_core.py`   | Graph, Compiler, Runtime engine |
-| `catwalk_schema.py` | YAML structure validator        |
+| `catwalk_schema.py` | JSON structure validator        |
 | `catwalk_server.py` | HTTP server via uvicorn         |
-| `flow.yaml`         | User-defined workflow file      |
+| `flow.json`         | User-defined workflow file      |
 | `install.sh`        | Installer script                |
 
 ---
@@ -149,20 +164,22 @@ def get_weather(ctx):
     return {"weather": "sunny"}
 ```
 
-Add it in your YAML as:
+Add it in your JSON as:
 
-```yaml
-- id: n5
-  type: extraction
-  name: get_weather
-  func: get_weather
+```json
+{
+  "id": "n5",
+  "type": "extraction",
+  "name": "get_weather",
+  "func": "get_weather"
+}
 ```
 
 ---
 
 ## 💡 Design Principles
 
-* **Readable**: Flows are YAML, easy to diff and share.
+* **Readable**: Flows are JSON, easy to diff and share.
 * **Composable**: Each node is a function.
 * **Portable**: Runs from CLI or HTTP.
 * **Framework-Free**: Only Python + Uvicorn.
