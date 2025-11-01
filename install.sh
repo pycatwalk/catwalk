@@ -5,7 +5,7 @@ echo "Installing CatWalk v0.1.0 ..."
 
 # Clone repository
 rm -rf ~/.catwalk
-git clone https://github.com/<your-repo>/catwalk ~/.catwalk
+git clone https://github.com/pycatwalk/catwalk ~/.catwalk
 
 # Install Python dependencies
 python3 -m pip install --user --upgrade pip
