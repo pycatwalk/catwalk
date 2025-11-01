@@ -3,7 +3,7 @@ import argparse
 import yaml
 import asyncio
 from catwalk_schema import validate_flow
-from catwalk import Graph, Compiler, Runtime
+from catwalk_core import Graph, Compiler, Runtime
 
 def main():
     parser = argparse.ArgumentParser(prog="catwalk", description="CatWalk workflow framework CLI")
