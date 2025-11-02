@@ -22,7 +22,53 @@ def create_parser():
     run_cmd.add_argument("--output", "-o", help="Save execution results to file")
     run_cmd.add_argument("--dry-run", action="store_true", help="Validate execution without running")
 
-    # Node management
+    # Backward compatible commands
+    # Add command (legacy: catwalk add node/edge)
+    add_cmd = sub.add_parser("add", help="Add node or edge")
+    add_cmd.add_argument("type", choices=["node", "edge"], help="Type to add")
+    add_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
+    add_cmd.add_argument("--id", help="Node/Edge ID")
+    add_cmd.add_argument("--node-type", choices=["trigger", "extraction", "conditional", "execution"], help="Node type")
+    add_cmd.add_argument("--name", help="Node name")
+    add_cmd.add_argument("--func", help="Node function")
+    add_cmd.add_argument("--source", help="Edge source node")
+    add_cmd.add_argument("--target", help="Edge target node")
+    add_cmd.add_argument("--position", help="Node position as JSON")
+    add_cmd.add_argument("--data", help="Additional data as JSON")
+    add_cmd.add_argument("--style", help="Edge style as JSON")
+    add_cmd.add_argument("--animated", action="store_true", help="Animated edge")
+
+    # Update command (legacy: catwalk update node/edge)
+    update_cmd = sub.add_parser("update", help="Update node or edge")
+    update_cmd.add_argument("type", choices=["node", "edge"], help="Type to update")
+    update_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
+    update_cmd.add_argument("--id", required=True, help="Node/Edge ID to update")
+    update_cmd.add_argument("--node-type", choices=["trigger", "extraction", "conditional", "execution"], help="New node type")
+    update_cmd.add_argument("--name", help="New name")
+    update_cmd.add_argument("--func", help="New function")
+    update_cmd.add_argument("--position", help="New position as JSON")
+    update_cmd.add_argument("--data", help="New data as JSON")
+    update_cmd.add_argument("--style", help="New edge style as JSON")
+    update_cmd.add_argument("--animated", action="store_true", help="Make edge animated")
+
+    # Remove command (legacy: catwalk remove node/edge)
+    remove_cmd = sub.add_parser("remove", help="Remove node or edge")
+    remove_cmd.add_argument("type", choices=["node", "edge"], help="Type to remove")
+    remove_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
+    remove_cmd.add_argument("--id", required=True, help="Node/Edge ID to remove")
+    remove_cmd.add_argument("--cascade", action="store_true", help="Also remove connected edges (for nodes)")
+
+    # List command (new: catwalk list nodes/edges)
+    list_cmd = sub.add_parser("list", help="List nodes or edges")
+    list_cmd.add_argument("type", choices=["nodes", "edges"], help="What to list")
+    list_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
+    list_cmd.add_argument("--node-type", help="Filter by node type")
+    list_cmd.add_argument("--format", choices=["table", "json", "simple"], default="simple", help="Output format")
+    list_cmd.add_argument("--detailed", action="store_true", help="Show detailed information")
+    list_cmd.add_argument("--from", help="Filter edges from this node")
+    list_cmd.add_argument("--to", help="Filter edges to this node")
+
+    # Node management (new structured commands)
     node_cmd = sub.add_parser("node", help="Node management commands")
     node_sub = node_cmd.add_subparsers(dest="node_action")
     
@@ -57,6 +103,7 @@ def create_parser():
     list_nodes.add_argument("--file", "-f", required=True, help="Workflow file")
     list_nodes.add_argument("--type", help="Filter by node type")
     list_nodes.add_argument("--format", choices=["table", "json", "simple"], default="simple", help="Output format")
+    list_nodes.add_argument("--detailed", action="store_true", help="Show detailed information")
 
     # Edge management
     edge_cmd = sub.add_parser("edge", help="Edge management commands")
@@ -83,6 +130,7 @@ def create_parser():
     list_edges.add_argument("--file", "-f", required=True, help="Workflow file")
     list_edges.add_argument("--from", help="Filter edges from this node")
     list_edges.add_argument("--to", help="Filter edges to this node")
+    list_edges.add_argument("--detailed", action="store_true", help="Show detailed information")
 
     # Validate command
     val_cmd = sub.add_parser("validate", help="Validate JSON flow")
@@ -238,8 +286,111 @@ def handle_node_remove(args):
     save_workflow(args.file, flow)
     print(f"✅ Removed node '{args.id}'")
 
+def handle_list(args):
+    """Handle the list command (catwalk list nodes/edges)."""
+    if args.type == "nodes":
+        # Convert to node list format
+        class NodeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.type = args.node_type
+                self.format = args.format
+                self.detailed = args.detailed if hasattr(args, 'detailed') else False
+        
+        handle_node_list(NodeArgs())
+    
+    elif args.type == "edges":
+        # Convert to edge list format
+        class EdgeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.detailed = args.detailed if hasattr(args, 'detailed') else False
+                setattr(self, 'from', getattr(args, 'from', None))
+                self.to = args.to
+        
+        handle_edge_list(EdgeArgs())
+
+def handle_legacy_add(args):
+    """Handle legacy add command (catwalk add node/edge)."""
+    if args.type == "node":
+        if not all([args.id, args.node_type, args.name, args.func]):
+            print("❌ Error: For adding nodes, --id, --node-type, --name, and --func are required")
+            return
+        
+        # Convert to node add format
+        class NodeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.id = args.id
+                self.type = args.node_type
+                self.name = args.name
+                self.func = args.func
+                self.position = args.position
+                self.data = args.data
+        
+        handle_node_add(NodeArgs())
+    
+    elif args.type == "edge":
+        if not all([args.source, args.target]):
+            print("❌ Error: For adding edges, --source and --target are required")
+            return
+        
+        # Convert to edge add format
+        class EdgeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.source = args.source
+                self.target = args.target
+                self.id = args.id
+                self.style = args.style
+                self.animated = args.animated
+        
+        handle_edge_add(EdgeArgs())
+
+def handle_legacy_update(args):
+    """Handle legacy update command (catwalk update node/edge)."""
+    if args.type == "node":
+        # Convert to node update format
+        class NodeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.id = args.id
+                self.type = args.node_type
+                self.name = args.name
+                self.func = args.func
+                self.position = args.position
+                self.data = args.data
+        
+        handle_node_update(NodeArgs())
+    
+    elif args.type == "edge":
+        print("❌ Error: Edge updating not yet implemented")
+
+def handle_legacy_remove(args):
+    """Handle legacy remove command (catwalk remove node/edge)."""
+    if args.type == "node":
+        # Convert to node remove format
+        class NodeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.id = args.id
+                self.cascade = args.cascade
+        
+        handle_node_remove(NodeArgs())
+    
+    elif args.type == "edge":
+        # Convert to edge remove format
+        class EdgeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.id = args.id
+                self.source = None
+                self.target = None
+        
+        handle_edge_remove(EdgeArgs())
+
 def handle_node_list(args):
-    """Handle node listing."""
+    """Handle node listing with detailed option."""
     flow = load_workflow(args.file)
     
     nodes = flow['nodes']
@@ -253,14 +404,115 @@ def handle_node_list(args):
     if args.format == "json":
         print(json.dumps(nodes, indent=2))
     elif args.format == "table":
-        print(f"{'ID':<15} {'Type':<12} {'Name':<20} {'Function':<30}")
-        print("-" * 80)
-        for node in nodes:
-            func_preview = node['func'][:27] + "..." if len(node['func']) > 30 else node['func']
-            print(f"{node['id']:<15} {node['type']:<12} {node['name']:<20} {func_preview:<30}")
+        if args.detailed:
+            print(f"{'ID':<15} {'Type':<12} {'Name':<20} {'Function':<40} {'Position':<15}")
+            print("-" * 105)
+            for node in nodes:
+                func_preview = node['func'][:37] + "..." if len(node['func']) > 40 else node['func']
+                position = str(node.get('position', 'N/A'))[:12] + "..." if len(str(node.get('position', 'N/A'))) > 15 else str(node.get('position', 'N/A'))
+                print(f"{node['id']:<15} {node['type']:<12} {node['name']:<20} {func_preview:<40} {position:<15}")
+        else:
+            print(f"{'ID':<15} {'Type':<12} {'Name':<20} {'Function':<30}")
+            print("-" * 80)
+            for node in nodes:
+                func_preview = node['func'][:27] + "..." if len(node['func']) > 30 else node['func']
+                print(f"{node['id']:<15} {node['type']:<12} {node['name']:<20} {func_preview:<30}")
     else:  # simple
-        for node in nodes:
-            print(f"• {node['id']} ({node['type']}): {node['name']}")
+        if args.detailed:
+            for node in nodes:
+                print(f"• {node['id']} ({node['type']}): {node['name']}")
+                print(f"  Function: {node['func']}")
+                if 'position' in node:
+                    print(f"  Position: {node['position']}")
+                if 'data' in node:
+                    print(f"  Data: {node['data']}")
+                print()
+        else:
+            for node in nodes:
+                print(f"• {node['id']} ({node['type']}): {node['name']}")
+
+def handle_edge_list(args):
+    """Handle edge listing with detailed option."""
+    flow = load_workflow(args.file)
+    
+    edges = flow['edges']
+    
+    if getattr(args, 'from', None):
+        edges = [e for e in edges if e.get('source') == getattr(args, 'from') or e.get('from') == getattr(args, 'from')]
+    
+    if args.to:
+        edges = [e for e in edges if e.get('target') == args.to or e.get('to') == args.to]
+    
+    if not edges:
+        print("No edges found")
+        return
+    
+    if args.detailed:
+        for edge in edges:
+            source = edge.get('source') or edge.get('from')
+            target = edge.get('target') or edge.get('to')
+            edge_id = edge.get('id', 'N/A')
+            print(f"• {source} → {target}")
+            print(f"  ID: {edge_id}")
+            if 'style' in edge:
+                print(f"  Style: {edge['style']}")
+            if edge.get('animated'):
+                print(f"  Animated: Yes")
+            print()
+    else:
+        for edge in edges:
+            source = edge.get('source') or edge.get('from')
+            target = edge.get('target') or edge.get('to')
+            edge_id = edge.get('id', '')
+            id_part = f" ({edge_id})" if edge_id else ""
+            print(f"• {source} → {target}{id_part}")
+
+def handle_node_list(args):
+    """Handle node listing with detailed option."""
+    flow = load_workflow(args.file)
+    
+    nodes = flow['nodes']
+    if hasattr(args, 'type') and args.type:
+        nodes = [n for n in nodes if n['type'] == args.type]
+    
+    if not nodes:
+        print("No nodes found")
+        return
+    
+    if args.format == "json":
+        print(json.dumps(nodes, indent=2))
+    elif args.format == "table":
+        if hasattr(args, 'detailed') and args.detailed:
+            print(f"{'ID':<15} {'Type':<12} {'Name':<20} {'Function':<40} {'Position':<15}")
+            print("-" * 105)
+            for node in nodes:
+                func_preview = node['func'][:37] + "..." if len(node['func']) > 40 else node['func']
+                position = str(node.get('position', 'N/A'))[:12] + "..." if len(str(node.get('position', 'N/A'))) > 15 else str(node.get('position', 'N/A'))
+                print(f"{node['id']:<15} {node['type']:<12} {node['name']:<20} {func_preview:<40} {position:<15}")
+        else:
+            print(f"{'ID':<15} {'Type':<12} {'Name':<20} {'Function':<30}")
+            print("-" * 80)
+            for node in nodes:
+                func_preview = node['func'][:27] + "..." if len(node['func']) > 30 else node['func']
+                print(f"{node['id']:<15} {node['type']:<12} {node['name']:<20} {func_preview:<30}")
+    else:  # simple
+        if hasattr(args, 'detailed') and args.detailed:
+            for node in nodes:
+                print(f"• {node['id']} ({node['type']}): {node['name']}")
+                print(f"  Function: {node['func']}")
+                if 'position' in node:
+                    print(f"  Position: {node['position']}")
+                if 'data' in node:
+                    print(f"  Data: {node['data']}")
+                print()
+        else:
+            for node in nodes:
+                print(f"• {node['id']} ({node['type']}): {node['name']}")
+
+def handle_original_node_list(args):
+    """Handle node listing (original function)."""
+    # This is just a wrapper that calls the enhanced version
+    handle_node_list(args)
 
 def handle_edge_add(args):
     """Handle edge addition."""
@@ -509,6 +761,18 @@ def main():
             from catwalk_server import serve
             print(f"🌐 Starting server on {args.host}:{args.port}")
             serve(args.port)
+
+        elif args.cmd == "add":
+            handle_legacy_add(args)
+
+        elif args.cmd == "update":
+            handle_legacy_update(args)
+
+        elif args.cmd == "remove":
+            handle_legacy_remove(args)
+
+        elif args.cmd == "list":
+            handle_list(args)
 
         elif args.cmd == "node":
             if args.node_action == "add":
