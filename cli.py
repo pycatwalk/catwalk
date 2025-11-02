@@ -25,10 +25,13 @@ def create_parser():
     # Backward compatible commands
     # Add command (legacy: catwalk add node/edge)
     add_cmd = sub.add_parser("add", help="Add node or edge")
-    add_cmd.add_argument("type", choices=["node", "edge"], help="Type to add")
+    add_cmd.add_argument("object_type", choices=["node", "edge"], help="Type to add")
     add_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
     add_cmd.add_argument("--id", help="Node/Edge ID")
-    add_cmd.add_argument("--node-type", choices=["trigger", "extraction", "conditional", "execution"], help="Node type")
+    # Support both --type and --node-type for flexibility
+    node_type_group = add_cmd.add_mutually_exclusive_group()
+    node_type_group.add_argument("--type", choices=["trigger", "extraction", "conditional", "execution"], help="Node type")
+    node_type_group.add_argument("--node-type", choices=["trigger", "extraction", "conditional", "execution"], help="Node type (alternative)")
     add_cmd.add_argument("--name", help="Node name")
     add_cmd.add_argument("--func", help="Node function")
     add_cmd.add_argument("--source", help="Edge source node")
@@ -40,7 +43,7 @@ def create_parser():
 
     # Update command (legacy: catwalk update node/edge)
     update_cmd = sub.add_parser("update", help="Update node or edge")
-    update_cmd.add_argument("type", choices=["node", "edge"], help="Type to update")
+    update_cmd.add_argument("object_type", choices=["node", "edge"], help="Type to update")
     update_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
     update_cmd.add_argument("--id", required=True, help="Node/Edge ID to update")
     update_cmd.add_argument("--node-type", choices=["trigger", "extraction", "conditional", "execution"], help="New node type")
@@ -53,14 +56,16 @@ def create_parser():
 
     # Remove command (legacy: catwalk remove node/edge)
     remove_cmd = sub.add_parser("remove", help="Remove node or edge")
-    remove_cmd.add_argument("type", choices=["node", "edge"], help="Type to remove")
+    remove_cmd.add_argument("object_type", choices=["node", "edge"], help="Type to remove")
     remove_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
-    remove_cmd.add_argument("--id", required=True, help="Node/Edge ID to remove")
+    remove_cmd.add_argument("--id", help="Node/Edge ID to remove")
+    remove_cmd.add_argument("--source", help="Edge source node (for edges without ID)")
+    remove_cmd.add_argument("--target", help="Edge target node (for edges without ID)")
     remove_cmd.add_argument("--cascade", action="store_true", help="Also remove connected edges (for nodes)")
 
     # List command (new: catwalk list nodes/edges)
     list_cmd = sub.add_parser("list", help="List nodes or edges")
-    list_cmd.add_argument("type", choices=["nodes", "edges"], help="What to list")
+    list_cmd.add_argument("object_type", choices=["nodes", "edges"], help="What to list")
     list_cmd.add_argument("--file", "-f", required=True, help="Workflow file")
     list_cmd.add_argument("--node-type", help="Filter by node type")
     list_cmd.add_argument("--format", choices=["table", "json", "simple"], default="simple", help="Output format")
@@ -124,6 +129,13 @@ def create_parser():
     remove_edge.add_argument("--id", help="Edge ID to remove")
     remove_edge.add_argument("--source", help="Source node ID")
     remove_edge.add_argument("--target", help="Target node ID")
+
+    # Update edge
+    update_edge = edge_sub.add_parser("update", help="Update an edge")
+    update_edge.add_argument("--file", "-f", required=True, help="Workflow file")
+    update_edge.add_argument("--id", required=True, help="Edge ID to update")
+    update_edge.add_argument("--style", help="New edge style as JSON")
+    update_edge.add_argument("--animated", action="store_true", help="Make edge animated")
 
     # List edges
     list_edges = edge_sub.add_parser("list", help="List all edges")
@@ -288,7 +300,7 @@ def handle_node_remove(args):
 
 def handle_list(args):
     """Handle the list command (catwalk list nodes/edges)."""
-    if args.type == "nodes":
+    if args.object_type == "nodes":
         # Convert to node list format
         class NodeArgs:
             def __init__(self):
@@ -299,7 +311,7 @@ def handle_list(args):
         
         handle_node_list(NodeArgs())
     
-    elif args.type == "edges":
+    elif args.object_type == "edges":
         # Convert to edge list format
         class EdgeArgs:
             def __init__(self):
@@ -312,9 +324,12 @@ def handle_list(args):
 
 def handle_legacy_add(args):
     """Handle legacy add command (catwalk add node/edge)."""
-    if args.type == "node":
-        if not all([args.id, args.node_type, args.name, args.func]):
-            print("❌ Error: For adding nodes, --id, --node-type, --name, and --func are required")
+    if args.object_type == "node":
+        # Get the node type from either --type or --node-type
+        node_type = getattr(args, 'type', None) or getattr(args, 'node_type', None)
+        
+        if not all([args.id, node_type, args.name, args.func]):
+            print("❌ Error: For adding nodes, --id, --type (or --node-type), --name, and --func are required")
             return
         
         # Convert to node add format
@@ -322,7 +337,7 @@ def handle_legacy_add(args):
             def __init__(self):
                 self.file = args.file
                 self.id = args.id
-                self.type = args.node_type
+                self.type = node_type
                 self.name = args.name
                 self.func = args.func
                 self.position = args.position
@@ -330,7 +345,7 @@ def handle_legacy_add(args):
         
         handle_node_add(NodeArgs())
     
-    elif args.type == "edge":
+    elif args.object_type == "edge":
         if not all([args.source, args.target]):
             print("❌ Error: For adding edges, --source and --target are required")
             return
@@ -349,7 +364,7 @@ def handle_legacy_add(args):
 
 def handle_legacy_update(args):
     """Handle legacy update command (catwalk update node/edge)."""
-    if args.type == "node":
+    if args.object_type == "node":
         # Convert to node update format
         class NodeArgs:
             def __init__(self):
@@ -363,12 +378,53 @@ def handle_legacy_update(args):
         
         handle_node_update(NodeArgs())
     
-    elif args.type == "edge":
-        print("❌ Error: Edge updating not yet implemented")
+    elif args.object_type == "edge":
+        # Convert to edge update format
+        class EdgeArgs:
+            def __init__(self):
+                self.file = args.file
+                self.id = args.id
+                self.style = args.style
+                self.animated = args.animated
+        
+        handle_edge_update(EdgeArgs())
+
+def handle_edge_update(args):
+    """Handle edge update."""
+    flow = load_workflow(args.file)
+    
+    # Find edge to update
+    edge = None
+    for e in flow['edges']:
+        if e.get('id') == args.id:
+            edge = e
+            break
+    
+    if not edge:
+        print(f"❌ Error: Edge '{args.id}' not found")
+        return
+
+    # Update fields
+    if args.style:
+        try:
+            edge['style'] = json.loads(args.style)
+        except json.JSONDecodeError:
+            print("❌ Error: Invalid JSON in style argument")
+            return
+    
+    if hasattr(args, 'animated') and args.animated:
+        edge['animated'] = True
+
+    save_workflow(args.file, flow)
+    print(f"✅ Updated edge '{args.id}'")
 
 def handle_legacy_remove(args):
     """Handle legacy remove command (catwalk remove node/edge)."""
-    if args.type == "node":
+    if args.object_type == "node":
+        if not args.id:
+            print("❌ Error: Node removal requires --id")
+            return
+        
         # Convert to node remove format
         class NodeArgs:
             def __init__(self):
@@ -378,14 +434,18 @@ def handle_legacy_remove(args):
         
         handle_node_remove(NodeArgs())
     
-    elif args.type == "edge":
+    elif args.object_type == "edge":
+        if not args.id and not (args.source and args.target):
+            print("❌ Error: Edge removal requires either --id or both --source and --target")
+            return
+        
         # Convert to edge remove format
         class EdgeArgs:
             def __init__(self):
                 self.file = args.file
                 self.id = args.id
-                self.source = None
-                self.target = None
+                self.source = args.source
+                self.target = args.target
         
         handle_edge_remove(EdgeArgs())
 
@@ -789,6 +849,8 @@ def main():
         elif args.cmd == "edge":
             if args.edge_action == "add":
                 handle_edge_add(args)
+            elif args.edge_action == "update":
+                handle_edge_update(args)
             elif args.edge_action == "remove":
                 handle_edge_remove(args)
             elif args.edge_action == "list":
