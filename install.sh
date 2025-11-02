@@ -37,6 +37,14 @@ esac
 
 echo "Detected platform: $PLATFORM"
 
+# Function to check if directory is in PATH
+is_in_path() {
+    case ":$PATH:" in
+        *:"$1":*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Check for required dependencies
 check_dependency() {
     local cmd="$1"
@@ -87,7 +95,7 @@ elif type git >/dev/null 2>&1; then
 elif [ -x "/usr/bin/git" ]; then
     echo "✅ Git found at: /usr/bin/git"
     # Add /usr/bin to PATH if it's missing
-    if [[ ":$PATH:" != *":/usr/bin:"* ]]; then
+    if ! is_in_path "/usr/bin"; then
         export PATH="/usr/bin:$PATH"
         echo "Added /usr/bin to PATH"
     fi
@@ -107,7 +115,7 @@ elif which "$PYTHON_CMD" >/dev/null 2>&1; then
 elif [ -x "/usr/bin/$PYTHON_CMD" ]; then
     echo "✅ $PYTHON_CMD found at: /usr/bin/$PYTHON_CMD"
     # Add /usr/bin to PATH if it's missing
-    if [[ ":$PATH:" != *":/usr/bin:"* ]]; then
+    if ! is_in_path "/usr/bin"; then
         export PATH="/usr/bin:$PATH"
         echo "Added /usr/bin to PATH"
     fi
@@ -200,30 +208,28 @@ esac
 
 # Add to PATH if missing (platform-specific)
 echo "Updating PATH..."
-case "$PLATFORM" in
-    "macOS")
-        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-            export PATH="$HOME/.local/bin:$PATH"
-            echo "Added ~/.local/bin to PATH in $SHELL_RC"
-        fi
-        ;;
-    "Linux")
-        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-            export PATH="$HOME/.local/bin:$PATH"
-            echo "Added ~/.local/bin to PATH in $SHELL_RC"
-        fi
-        ;;
-    "Windows")
-        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-            export PATH="$HOME/.local/bin:$PATH"
-            echo "Added ~/.local/bin to PATH in $SHELL_RC"
+
+# Function to check if directory is in PATH
+is_in_path() {
+    case ":$PATH:" in
+        *:"$1":*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Add ~/.local/bin to PATH if not present
+if ! is_in_path "$HOME/.local/bin"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
+    export PATH="$HOME/.local/bin:$PATH"
+    echo "Added ~/.local/bin to PATH in $SHELL_RC"
+    case "$PLATFORM" in
+        "Windows")
             echo "Note: You may need to restart your terminal or run '. $SHELL_RC'"
-        fi
-        ;;
-esac
+            ;;
+    esac
+else
+    echo "~/.local/bin already in PATH"
+fi
 
 echo ""
 echo "🎉 CatWalk installed successfully!"
